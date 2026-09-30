@@ -11,7 +11,7 @@ enum Mode {
 final class Editor {
     let board = Board()
     var mode: Mode = .grab
-    var paintColor: TileColor = Palette.colors[5]
+    var paintColor: TileColor = Palette.classic
     private(set) var selectionCount = 0
     /// A short message shown over the canvas, then cleared.
     private(set) var toast: String?

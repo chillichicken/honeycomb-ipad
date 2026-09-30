@@ -3,8 +3,11 @@ import UIKit
 import Core
 
 enum Palette {
+    /// The color new tiles start with (the desktop game's "classic").
+    static let classic: TileColor = 0xF5A623
+
     static let colors: [TileColor] = [
-        0xE74C3C, 0xE67E22, 0xF1C40F, 0x2ECC71, 0x1ABC9C, 0x3498DB,
+        classic, 0xE74C3C, 0xF1C40F, 0x2ECC71, 0x1ABC9C, 0x3498DB,
         0x9B59B6, 0xE84393, 0x8D6E63, 0xECF0F1, 0x95A5A6, 0x2C3E50,
     ]
 }
