@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AC9BA7D9306D1DD000E5F113 /* Core in Frameworks */ = {isa = PBXBuildFile; productRef = AC9BA7D8306D1DD000E5F113 /* Core */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		AC17064D306D1BF70022387D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AC9BA7D9306D1DD000E5F113 /* Core in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = "Snappy Shapes";
 			packageProductDependencies = (
+				AC9BA7D8306D1DD000E5F113 /* Core */,
 			);
 			productName = "Snappy Shapes";
 			productReference = AC17063F306D1BF60022387D /* Snappy Shapes.app */;
@@ -568,6 +574,13 @@
 			relativePath = Packages/Core;
 		};
 /* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AC9BA7D8306D1DD000E5F113 /* Core */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Core;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AC170637306D1BF60022387D /* Project object */;
 }

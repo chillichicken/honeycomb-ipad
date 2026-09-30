@@ -27,7 +27,7 @@ public final class Board {
         self.maxTiles = maxTiles
     }
 
-    var lattice: Lattice { Lattice(store: store, shape: shape) }
+    public var lattice: Lattice { Lattice(store: store, shape: shape) }
 
     public func canAdd(_ count: Int) -> Bool { store.size + count <= maxTiles }
 
@@ -126,6 +126,12 @@ public final class Board {
         if let anchor { reanchor(nearX: anchor.tx, anchor.ty) }
     }
 
+    /// Marks a tile as the one "+" grows from next (a drag just put it down).
+    public func didTouch(_ tile: Tile) {
+        lastActive = tile
+        spawnBackIndex = nil
+    }
+
     /// After removing the anchor, "+" continues right beside the gap.
     private func reanchor(nearX x: Double, _ y: Double) {
         lastActive = store.nearest(x, y)
@@ -146,6 +152,15 @@ public final class Board {
     }
 
     // MARK: Animation
+
+    /// Snaps every animating tile straight to its settled position.
+    public func settleEasing() {
+        for t in easing {
+            t.x = t.tx
+            t.y = t.ty
+        }
+        easing = []
+    }
 
     /// Eases only the tiles actually mid-animation, not every tile on the board;
     /// a tile drops out once it visually converges. `skipping` are tiles held by a drag.
