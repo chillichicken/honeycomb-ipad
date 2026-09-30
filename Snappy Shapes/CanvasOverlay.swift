@@ -11,6 +11,14 @@ final class CanvasOverlay {
     private let bigNumber = UILabel()
     private let lines = UILabel()
 
+    #if DEBUG
+    /// When the running executable was built, so it's obvious whether the app on screen is the latest one.
+    private static let buildStamp: String = {
+        let date = (try? Bundle.main.executableURL?.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? nil
+        return "built " + (date?.formatted(.dateTime.hour().minute().second()) ?? "?")
+    }()
+    #endif
+
     func attach(to view: UIView) {
         for layer in [marquee, ghost] {
             layer.lineDashPattern = [6, 4]
@@ -72,6 +80,9 @@ final class CanvasOverlay {
             text.append(!c.ready ? "counting islands…" : c.counts.islands == 1 ? "1 island" : "\(c.counts.islands) islands · largest \(c.counts.largest)")
         }
         text.append("zoom \(Int((camera.zoom * 100).rounded()))%")
+        #if DEBUG
+        text.append(Self.buildStamp)
+        #endif
         text.append("\(Int(fps.rounded())) fps · cpu \(String(format: "%.1f", stats.cpuMs)) ms · gpu \(String(format: "%.1f", stats.gpuMs)) ms")
         setText(bigNumber, String(total))
         setText(lines, text.reversed().joined(separator: "\n"))  // the first line sits at the bottom
