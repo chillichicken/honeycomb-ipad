@@ -126,6 +126,27 @@ final class GestureUITests: XCTestCase {
         }
     }
 
+    func testDraggingATileBackNextToItsNeighborSnapsIt() {
+        launch()  // one seed tile, at the middle of the screen
+        settle()
+        app.descendants(matching: .any)["Add tile"].firstMatch.press(forDuration: 0.2)  // a neighbor
+        Thread.sleep(forTimeInterval: 1.5)
+        XCTAssertEqual(value("tiles"), 2)
+        XCTAssertEqual(value("islands"), 1)
+
+        let seed = board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let away = board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+        seed.press(forDuration: 0.2, thenDragTo: away)  // carry it off and drop it in the open
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertEqual(value("islands"), 2, "dropped far away: two separate builds")
+
+        // bring it back to within a finger's width of where it was
+        let back = board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).withOffset(CGVector(dx: 14, dy: 9))
+        away.press(forDuration: 0.2, thenDragTo: back)
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertEqual(value("islands"), 1, "dropped next to its neighbor it must snap onto the lattice")
+    }
+
     func testSoundToggleSwitchesBetweenOnAndOff() {
         launch()
         let on = app.buttons["Sound on"]

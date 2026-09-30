@@ -102,6 +102,34 @@ public struct Lattice {
         return best.map { FreeSlot(slot: $0, distance: bestD2.squareRoot()) }
     }
 
+    /// Up to `limit` free neighbor slots within `maxDist` of the point, nearest first
+    /// (distinct positions). `freeSlot` is the one-answer fast path; this is for callers
+    /// that may have to reject the nearest and fall back to the next.
+    public func freeSlots(
+        nearX wx: Double, _ wy: Double, maxDist: Double, orientation required: Int? = nil, limit: Int
+    ) -> [FreeSlot] {
+        let d0 = shape.neighborDist
+        let searchRadius = Swift.min(maxDist, d0 * Self.maxSearchTileWidths)
+        var found: [FreeSlot] = []
+        let maxD2 = maxDist * maxDist
+        for t in store.near(wx, wy, radius: searchRadius + d0) {
+            for slot in shape.neighborSlots[t.orientation] {
+                if let required, slot.orientation != required { continue }
+                let sx = t.tx + slot.dx
+                let sy = t.ty + slot.dy
+                let d2 = dist2(wx, wy, sx, sy)
+                guard d2 < maxD2 else { continue }
+                // several owners share the same free slot: keep it once
+                if found.contains(where: { dist2($0.slot.x, $0.slot.y, sx, sy) < 1 }) { continue }
+                if tile(inSlotAt: sx, sy) == nil {
+                    found.append(FreeSlot(slot: Slot(x: sx, y: sy, orientation: slot.orientation), distance: d2.squareRoot()))
+                }
+            }
+        }
+        found.sort { $0.distance < $1.distance }
+        return Array(found.prefix(limit))
+    }
+
     /// Closest free neighbor slot reachable from `origin`, so "+" fills rings
     /// outward tile by tile. Breadth-first over the connected build. If the
     /// origin is buried so deep this would flood a huge solid block, it walks

@@ -87,3 +87,70 @@ import Testing
         #expect(drag.drop(snapDistance: snapRadius) == .snapped)
     }
 }
+
+@Suite struct GroupSnapTests {
+    /// A build of `n` tiles, with a connected group of `size` tiles carried off its outer edge.
+    func carve(_ shape: TileShape, build n: Int, group size: Int) -> (Board, [Tile]) {
+        let board = Board(shape: shape)
+        for _ in 0..<n { board.spawnTile(color: 1, cameraCenter: .zero) }
+        board.settleEasing()
+        let start = board.store.max { hypot($0.tx, $0.ty) < hypot($1.tx, $1.ty) }!
+        let near = board.store.near(start.tx, start.ty, radius: shape.neighborDist * 3)
+            .sorted { hypot($0.tx - start.tx, $0.ty - start.ty) < hypot($1.tx - start.tx, $1.ty - start.ty) }
+        return (board, Array(near.prefix(size)))
+    }
+
+    @Test(arguments: [TileShape.hexagon, .triangle, .diamond])
+    func aSnappedGroupNeverLandsOnTopOfExistingTiles(shape: TileShape) {
+        var rng = SeededRandom(seed: 5)
+        var snapped = 0
+        for _ in 0..<300 {
+            let (board, group) = carve(shape, build: 40, group: 2 + Int(rng.next() * 3))
+            let start = group[0]
+            let drag = DragSession(board: board, tiles: group, grabbedAt: SIMD2(start.x, start.y))
+            let angle = rng.next() * 2 * .pi, r = shape.neighborDist * (1.5 + rng.next() * 1.5)
+            drag.move(to: SIMD2(start.tx + cos(angle) * r, start.ty + sin(angle) * r), snapDistance: snapRadius)
+            let landing = drag.drop(snapDistance: snapRadius)
+            board.settleEasing()
+            guard landing == .snapped else { continue }
+            snapped += 1
+            let members = Set(group)
+            for g in group {
+                let under = board.store.filter { !members.contains($0) && hypot($0.tx - g.tx, $0.ty - g.ty) < shape.occupiedEps * 0.9 }
+                #expect(under.isEmpty, "a snapped group member sits on top of an existing tile")
+            }
+        }
+        #expect(snapped > 20, "groups should still snap often (\(snapped) of 300)")
+    }
+
+    @Test func aLineOfThreeFindsTheSlotWhereAllOfItFitsNotJustTheNearestForOneTile() {
+        // a wall of hexagons along y = 0; a horizontal row of three is dropped so that its
+        // first tile is nearest to a slot that would push the third one into the wall
+        let shape = TileShape.hexagon
+        let d = shape.neighborDist
+        let wall = (0..<8).map { makeTile(Double($0) * d, 0) }
+        let board = makeBoard(tiles: wall)
+        let row = (0..<3).map { makeTile(Double($0) * d, 1000) }
+        for t in row { board.store.add(t) }
+        let drag = DragSession(board: board, tiles: row, grabbedAt: SIMD2(0, 1000))
+        drag.move(to: SIMD2(2 * d + 5, d * 0.4), snapDistance: snapRadius * 2)  // straddling the wall
+        _ = drag.drop(snapDistance: snapRadius * 2)
+        board.settleEasing()
+        let onWall = row.filter { g in wall.contains { hypot($0.tx - g.tx, $0.ty - g.ty) < shape.occupiedEps * 0.9 } }
+        #expect(onWall.isEmpty, "no member of the row may end up on the wall")
+    }
+
+    @Test func aGroupThatFitsNowhereStaysWhereItWasDropped() {
+        let shape = TileShape.hexagon
+        let d = shape.neighborDist
+        // a solid 5x5 block: there is no free slot the whole 3-row could take next to it in the middle
+        var tiles: [Tile] = []
+        for x in 0..<5 { for y in 0..<5 { tiles.append(makeTile(Double(x) * d, Double(y) * d)) } }
+        let board = makeBoard(tiles: tiles)
+        let row = (0..<3).map { makeTile(Double($0) * d, 5000) }
+        for t in row { board.store.add(t) }
+        let drag = DragSession(board: board, tiles: row, grabbedAt: SIMD2(0, 5000))
+        drag.move(to: SIMD2(2 * d, 2 * d), snapDistance: 4)  // dropped into the middle of the block, snap range tiny
+        #expect(drag.drop(snapDistance: 4) == .free)
+    }
+}

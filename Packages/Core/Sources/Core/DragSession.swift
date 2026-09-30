@@ -88,6 +88,9 @@ public final class DragSession {
         return landing
     }
 
+    /// How many alternative slots a group tries before giving up on snapping.
+    private static let groupCandidateLimit = 24
+
     private func findSnap(within maxDist: Double, sampleLimit: Int?) -> SnapCandidate? {
         let n = items.count
         guard n > 0 else { return nil }
@@ -108,19 +111,44 @@ public final class DragSession {
 
         let checks = Swift.min(n, sampleLimit ?? n)
         let start = sampleLimit == nil ? 0 : cursor % n
-        var best: SnapCandidate?
-        var bestD = maxDist
+        defer { if sampleLimit != nil { cursor = (start + checks) % n } }
+
+        if n == 1 {
+            // one tile: the nearest free slot it fits is always a clean landing
+            let tile = items[0].tile
+            return lattice.freeSlot(nearX: tile.x, tile.y, maxDist: maxDist, orientation: tile.orientation)
+                .map { SnapCandidate(slot: $0.slot, tile: tile) }
+        }
+
+        // A group moves rigidly, so a slot that suits one tile is only a good landing if
+        // every other member also lands on free ground. Rank candidate slots by distance
+        // and take the nearest one the whole group fits.
+        var candidates: [(distance: Double, slot: Slot, tile: Tile)] = []
         for k in 0..<checks {
             let tile = items[(start + k) % n].tile
-            if let s = lattice.freeSlot(
-                nearX: tile.x, tile.y, maxDist: bestD, orientation: tile.orientation)
-            {
-                bestD = s.distance
-                best = SnapCandidate(slot: s.slot, tile: tile)
+            for s in lattice.freeSlots(nearX: tile.x, tile.y, maxDist: maxDist, orientation: tile.orientation, limit: 3) {
+                candidates.append((s.distance, s.slot, tile))
             }
         }
-        if sampleLimit != nil { cursor = (start + checks) % n }
-        return best
+        candidates.sort { $0.distance < $1.distance }
+        for c in candidates.prefix(Self.groupCandidateLimit) where groupFits(shiftX: c.slot.x - c.tile.tx, shiftY: c.slot.y - c.tile.ty, sample: sampleLimit) {
+            return SnapCandidate(slot: c.slot, tile: c.tile)
+        }
+        return nil
+    }
+
+    /// Would every member (or, for a huge group mid-drag, a sample of them) land on free ground?
+    private func groupFits(shiftX: Double, shiftY: Double, sample: Int?) -> Bool {
+        let lattice = board.lattice
+        let n = items.count
+        let stride = Swift.max(1, n / Swift.max(sample ?? n, 1))
+        var i = 0
+        while i < n {
+            let t = items[i].tile
+            if lattice.tile(inSlotAt: t.tx + shiftX, t.ty + shiftY) != nil { return false }
+            i += stride
+        }
+        return true
     }
 
     /// A single tile dropped on top of another slides into the nearest free slot
