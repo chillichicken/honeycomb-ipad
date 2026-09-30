@@ -28,13 +28,20 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
         one.delegate = self
         addGestureRecognizer(one)
 
-        // two fingers (or trackpad scroll): always navigate
+        // two fingers on the glass: always navigate
         let two = UIPanGestureRecognizer(target: self, action: #selector(twoFingers))
         two.minimumNumberOfTouches = 2
         two.maximumNumberOfTouches = 2
-        two.allowedScrollTypesMask = .all
         two.delegate = self
         addGestureRecognizer(two)
+
+        // a trackpad or wheel scroll is its own kind of input: it needs a recognizer that
+        // takes scroll events and no touches (a touch recognizer never sees them)
+        let scroll = UIPanGestureRecognizer(target: self, action: #selector(twoFingers))
+        scroll.allowedScrollTypesMask = .all
+        scroll.allowedTouchTypes = []
+        scroll.delegate = self
+        addGestureRecognizer(scroll)
 
         let pinch = UIPinchGestureRecognizer(target: self, action: #selector(pinch))
         pinch.delegate = self

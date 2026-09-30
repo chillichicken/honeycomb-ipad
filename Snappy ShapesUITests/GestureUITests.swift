@@ -50,6 +50,23 @@ final class GestureUITests: XCTestCase {
         XCTAssertLessThan(value("zoom"), start * 0.9, "pinching inward should zoom out")
     }
 
+    func testDebugZoomButtonsZoom() {
+        launch(tiles: 30)
+        settle()
+        let start = value("zoom")
+        app.buttons["Zoom in"].tap()
+        app.buttons["Zoom in"].tap()
+        settle()
+        XCTAssertGreaterThan(value("zoom"), start * 1.8)
+        app.buttons["Zoom out"].tap()
+        settle()
+        XCTAssertLessThan(value("zoom"), start * 1.8 * 0.9 * 1.6)
+        app.buttons["Zoom out"].tap()
+        app.buttons["Zoom out"].tap()
+        settle()
+        XCTAssertLessThan(value("zoom"), start * 0.9)
+    }
+
     func testOneFingerDragOnEmptyCanvasPansInGrabMode() {
         launch(tiles: 30)
         settle()

@@ -25,6 +25,23 @@ struct ContentView: View {
                         .frame(maxHeight: .infinity)
                     #endif
                     TopBar(model: model) { Task { await model.goHome() } }
+                    #if DEBUG
+                    VStack(spacing: 10) {
+                        Button { model.editor.zoomStep(1 / 1.4) } label: {
+                            Image(systemName: "minus").font(.title2.weight(.semibold)).frame(width: 44, height: 44)
+                        }
+                        .accessibilityLabel("Zoom out")
+                        Button { model.editor.zoomStep(1.4) } label: {
+                            Image(systemName: "plus.magnifyingglass").font(.title3).frame(width: 44, height: 44)
+                        }
+                        .accessibilityLabel("Zoom in")
+                    }
+                    .foregroundStyle(Color(Theme.text))
+                    .panel(Capsule())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    .padding(16)
+                    .padding(.bottom, 8)
+                    #endif
                     if let toast = model.editor.toast {
                         Text(toast)
                             .font(.subheadline)

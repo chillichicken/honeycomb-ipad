@@ -121,6 +121,11 @@ final class Editor {
         touch()
     }
 
+    /// Zoom by a fixed step around the middle of the screen.
+    func zoomStep(_ factor: Double) {
+        zoom(by: factor, around: CGPoint(x: camera.size.width / 2, y: camera.size.height / 2))
+    }
+
     func zoom(by factor: Double, around p: CGPoint) {
         camera.zoom(by: factor, around: p)
         touch()
