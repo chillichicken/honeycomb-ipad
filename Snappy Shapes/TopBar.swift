@@ -5,27 +5,34 @@ import Core
 /// mode a color strip drops down underneath.
 struct TopBar: View {
     @Bindable var editor: Editor
+    let onHome: () -> Void
 
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
+                Button(action: onHome) {
+                    Image(systemName: "folder").font(.title3).frame(width: 44, height: 44)
+                }
+                .foregroundStyle(Color(Theme.text))
+                .panel(Circle())
+                .accessibilityLabel("Puzzles")
+
                 HStack(spacing: 4) {
                     modeButton(.grab, "hand.draw", "Grab")
                     modeButton(.select, "rectangle.dashed", "Select")
                     modeButton(.recolor, "drop.fill", "Recolor", tint: Color(tile: editor.paintColor))
                 }
                 .padding(4)
-                .background(.thinMaterial, in: Capsule())
+                .panel(Capsule())
 
                 Spacer()
 
                 if editor.selectionCount > 0 {
                     Button(role: .destructive) { editor.deleteSelection() } label: {
                         Label("\(editor.selectionCount)", systemImage: "trash")
-                            .labelStyle(.titleAndIcon)
                             .padding(.horizontal, 14).padding(.vertical, 10)
                     }
-                    .background(.thinMaterial, in: Capsule())
+                    .panel(Capsule())
                 }
 
                 #if DEBUG
@@ -36,13 +43,15 @@ struct TopBar: View {
                 } label: {
                     Image(systemName: "ellipsis").frame(width: 44, height: 44)
                 }
-                .background(.thinMaterial, in: Circle())
+                .foregroundStyle(Color(Theme.text))
+                .panel(Circle())
                 #endif
 
                 Button { editor.addTile() } label: {
                     Image(systemName: "plus").font(.title2.weight(.semibold)).frame(width: 44, height: 44)
                 }
-                .background(.thinMaterial, in: Circle())
+                .foregroundStyle(Color(Theme.text))
+                .panel(Circle())
             }
 
             if editor.mode == .recolor {
@@ -51,13 +60,13 @@ struct TopBar: View {
                         ForEach(Palette.colors, id: \.self) { color in
                             Button { editor.pick(color: color) } label: {
                                 Circle().fill(Color(tile: color)).frame(width: 34, height: 34)
-                                    .overlay(Circle().stroke(.primary.opacity(color == editor.paintColor ? 0.9 : 0.15), lineWidth: 3))
+                                    .overlay(Circle().stroke(Color(Theme.accent).opacity(color == editor.paintColor ? 1 : 0), lineWidth: 3))
                             }
                         }
                     }
                     .padding(8)
                 }
-                .background(.thinMaterial, in: Capsule())
+                .panel(Capsule())
                 .frame(maxWidth: 520)
             }
         }
@@ -69,9 +78,9 @@ struct TopBar: View {
         Button { editor.mode = mode } label: {
             Image(systemName: symbol)
                 .font(.title3)
-                .foregroundStyle(editor.mode == mode ? Color.white : (tint ?? Color.primary))
+                .foregroundStyle(editor.mode == mode ? Color(Theme.textBright) : (tint ?? Color(Theme.text)))
                 .frame(width: 52, height: 44)
-                .background(editor.mode == mode ? Color.accentColor : Color.clear, in: Capsule())
+                .background(editor.mode == mode ? Color(Theme.accent) : Color.clear, in: Capsule())
         }
         .accessibilityLabel(label)
     }

@@ -3,7 +3,7 @@ import Testing
 @testable import Core
 
 private let origin = SIMD2(0.0, 0.0)
-private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
+private let allShapes: [TileShape] = ShapeID.allCases.map(TileShape.of)
 
 @Suite struct SpawnTests {
     @Test func firstTileGoesAtTheCameraCenter() {
@@ -16,7 +16,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
     }
 
     @Test(arguments: allShapes)
-    func sixtyPressesBuildOneConnectedIslandWithNoOverlaps(shape: Shape) {
+    func sixtyPressesBuildOneConnectedIslandWithNoOverlaps(shape: TileShape) {
         let board = makeBoard(shape)
         for _ in 0..<60 { board.spawnTile(color: 0xABCDEF, cameraCenter: origin) }
         let tiles = Array(board.store)
@@ -48,7 +48,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
     }
 
     @Test func hopsToAnotherFreeSlotWhenTheAnchorIsFullySurrounded() {
-        let shape = Shape.hexagon
+        let shape = TileShape.hexagon
         let board = makeBoard()
         let center = makeTile(0, 0)
         board.store.add(center)
@@ -68,7 +68,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
     }
 
     @Test func snapsToAFreeNeighborSlotOfTheNearestBuild() {
-        let shape = Shape.hexagon
+        let shape = TileShape.hexagon
         let board = makeBoard(tiles: [makeTile(0, 0)])
         let t = board.spawnTile(color: 0x111111, at: SIMD2(500, 3))
         let nearest = shape.neighborSlots[0].min {
@@ -79,7 +79,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
     }
 
     @Test func givesTrianglesTheOrientationTheLatticeRequires() {
-        let tri = Shape.triangle
+        let tri = TileShape.triangle
         let board = makeBoard(tri, tiles: [makeTile(0, 0, orientation: 0)])
         let t = board.spawnTile(color: 0x111111, at: SIMD2(10, 200))
         let slot = tri.neighborSlots[0].first { abs($0.dx - t.tx) < 1e-6 && abs($0.dy - t.ty) < 1e-6 }
@@ -89,7 +89,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
 }
 
 @Suite struct FreeSlotTests {
-    let shape = Shape.hexagon
+    let shape = TileShape.hexagon
     var east: NeighborSlot { shape.neighborSlots[0][5] }  // 330°
 
     func lattice(_ tiles: [Tile]) -> Lattice {
@@ -122,7 +122,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
     }
 
     @Test func filtersByRequiredOrientationForTriangles() {
-        let tri = Shape.triangle
+        let tri = TileShape.triangle
         let l = Lattice(store: makeBoard(tri, tiles: [makeTile(0, 0, orientation: 0)]).store, shape: tri)
         let slot = tri.neighborSlots[0][0]
         #expect(l.freeSlot(nearX: slot.dx, slot.dy, maxDist: 20, orientation: 1) != nil)
@@ -203,7 +203,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
     }
 
     @Test func countsSeparateIslandsAndTheLargest() {
-        let d = Shape.hexagon.neighborDist
+        let d = TileShape.hexagon.neighborDist
         func line(_ n: Int, _ y: Double) -> [Tile] { (0..<n).map { makeTile(Double($0) * d, y) } }
         let board = makeBoard(tiles: line(5, 0) + line(2, 1000) + line(1, -1000))
         #expect(computeClusters(board.store, shape: .hexagon) == ClusterCounts(islands: 3, largest: 5))
@@ -249,7 +249,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
 @Suite struct BigBoardTests {
     @Test func slotSearchEdgeSpawningAndRemovalDontScaleWithTileCount() {
         let board = makeBoard()
-        let d = Shape.hexagon.neighborDist
+        let d = TileShape.hexagon.neighborDist
         let cols = 700
         for i in 0..<300_000 {
             let col = i % cols
@@ -274,7 +274,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
 @Suite struct BuriedSpawnTests {
     @Test(arguments: [(ShapeID.hexagon, 40.0), (.diamond, 40.0), (.triangle, 60.0)])
     func findsAFreeEdgeSlotQuicklyAndTheResultIsAValidLatticeSlot(id: ShapeID, radius: Double) {
-        let shape = Shape.of(id)
+        let shape = TileShape.of(id)
         let board = lattice(block: shape, radiusTiles: radius)
         let before = board.store.size
         #expect(before > 3000)  // deeper than the BFS cap, so the walk path runs
@@ -301,7 +301,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
     }
 
     @Test func aNearbyHoleIsStillFoundRingByRingNotSkippedForTheFarEdge() {
-        let shape = Shape.hexagon
+        let shape = TileShape.hexagon
         let board = lattice(block: shape, radiusTiles: 30)
         let target = board.store.nearest(shape.neighborDist * 3, 0)!
         let center = board.store.nearest(0, 0)!

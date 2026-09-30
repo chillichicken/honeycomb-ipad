@@ -17,7 +17,7 @@ func areAdjacent(_ a: Tile, _ b: Tile, neighborDist d: Double) -> Bool {
 /// Full flood fill over snapped adjacency: separate islands and the size of the
 /// biggest connected build. Simple and whole-board (O(n)), so it's the test
 /// oracle for `ClusterTracker`, not something to call every frame.
-public func computeClusters(_ store: TileStore, shape: Shape) -> ClusterCounts {
+public func computeClusters(_ store: TileStore, shape: TileShape) -> ClusterCounts {
     let d = shape.neighborDist
     var visited = Set<Tile>()
     var counts = ClusterCounts(islands: 0, largest: 0)
@@ -82,7 +82,7 @@ public final class ClusterTracker {
     private var infos: [ChunkCoord: ChunkInfo] = [:]
     private var labelQueue = Set<ChunkCoord>()
     private var edgeQueue = Set<ChunkCoord>()
-    private var shape: Shape?
+    private var shape: TileShape?
     private var stale = true
 
     public init(store: TileStore) {
@@ -91,7 +91,7 @@ public final class ClusterTracker {
     }
 
     /// Does up to `budget` of pending work (at least one chunk, if any is pending).
-    public func step(shape: Shape, budget: Duration) {
+    public func step(shape: TileShape, budget: Duration) {
         if shape.id != self.shape?.id {
             // adjacency depends on tile size: start over
             self.shape = shape

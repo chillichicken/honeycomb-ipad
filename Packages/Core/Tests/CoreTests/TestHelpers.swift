@@ -43,14 +43,14 @@ func contains(_ tiles: [Tile], _ t: Tile) -> Bool {
     tiles.contains { $0 === t }
 }
 
-func makeBoard(_ shape: Shape = .hexagon, tiles: [Tile] = []) -> Board {
+func makeBoard(_ shape: TileShape = .hexagon, tiles: [Tile] = []) -> Board {
     let board = Board(shape: shape)
     for t in tiles { board.store.add(t) }
     return board
 }
 
 /// Grows a disc of tiles by walking the shape's lattice from the origin.
-func lattice(block shape: Shape, radiusTiles: Double) -> Board {
+func lattice(block shape: TileShape, radiusTiles: Double) -> Board {
     let board = Board(shape: shape)
     var seen: Set<[Int]> = [[0, 0]]
     var queue: [(Double, Double, Int)] = [(0, 0, 0)]
@@ -70,7 +70,7 @@ func lattice(block shape: Shape, radiusTiles: Double) -> Board {
 /// Grows random connected builds by walking the shape's lattice, so borders
 /// between chunks get crossed.
 func randomBoard(
-    _ shape: Shape, seed: UInt64, builds: Int, tilesPerBuild: Int, spread: Double
+    _ shape: TileShape, seed: UInt64, builds: Int, tilesPerBuild: Int, spread: Double
 ) -> TileStore {
     var rng = SeededRandom(seed: seed)
     let store = TileStore()

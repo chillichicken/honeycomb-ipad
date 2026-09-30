@@ -22,8 +22,51 @@ final class Editor {
     @ObservationIgnored private(set) var marquee: (from: SIMD2<Double>, to: SIMD2<Double>)?
     @ObservationIgnored private var panning = false
     @ObservationIgnored private var lastPoint = CGPoint.zero
+    @ObservationIgnored private(set) var lastEditAt = Date.distantPast
+    @ObservationIgnored let clusters: ClusterTracker
+    @ObservationIgnored private var clusterVersion = 0
+
+    init() { clusters = ClusterTracker(store: board.store) }
 
     func touch() { version += 1 }
+
+    /// A change to the board itself (as opposed to the camera or a mode switch).
+    private func edited() {
+        lastEditAt = Date()
+        touch()
+    }
+
+    /// Called every display frame: eases tiles, and works through island counting
+    /// in small slices (held back while a finger is carrying tiles).
+    func frameTick() {
+        board.easeTowardTargets(skipping: drag?.tiles ?? [])
+        if !board.easing.isEmpty { touch() }
+        if drag == nil { clusters.step(shape: board.shape, budget: .milliseconds(3)) }
+        if clusters.version != clusterVersion {
+            clusterVersion = clusters.version
+            touch()
+        }
+    }
+
+    /// A fresh, empty board of `shape`.
+    func reset(shape: TileShape) {
+        board.replace(shape: shape, tiles: [])
+        _ = board.store.takeDirty()
+        camera.center = .zero
+        camera.zoom = 1
+        mode = .grab
+        selectionCount = 0
+        touch()
+    }
+
+    /// After a puzzle was loaded into the board.
+    func didLoad(centroid: SIMD2<Double>) {
+        camera.center = centroid
+        camera.zoom = 1
+        mode = .grab
+        selectionCount = 0
+        touch()
+    }
 
     private var snapDistance: Double { snapRadius / min(camera.zoom, 1) }
 
@@ -36,20 +79,20 @@ final class Editor {
         guard board.canAdd(1) else { return }  // TODO: toast
         board.spawnTile(color: paintColor, cameraCenter: camera.center)
         mode = .grab
-        touch()
+        edited()
     }
 
     func deleteSelection() {
         board.remove(board.selected)
         syncSelection()
-        touch()
+        edited()
     }
 
     /// Picking a color paints the whole selection, if there is one.
     func pick(color: TileColor) {
         paintColor = color
         for t in board.selected { board.store.setColor(t, color) }
-        touch()
+        if !board.selected.isEmpty { edited() } else { touch() }
     }
 
     // MARK: Two fingers
@@ -79,6 +122,8 @@ final class Editor {
             // the tile itself, or the whole selection it belongs to
             let targets = board.selected.contains(tile) ? Array(board.selected) : [tile]
             for t in targets { board.store.setColor(t, paintColor) }
+            edited()
+            return
         }
         touch()
     }
@@ -120,13 +165,15 @@ final class Editor {
 
     func endDrag() {
         if let drag {
+            let moved = drag.moved
             drag.drop(snapDistance: snapDistance)
             self.drag = nil
+            if moved { lastEditAt = Date() }  // a plain tap isn't an edit
         }
         if let m = marquee {
-            // every tile inside toggles; a marquee always adds to what's selected
-            board.store.forEachTile(
-                inMinX: min(m.from.x, m.to.x), minY: min(m.from.y, m.to.y),
+            // every shape the frame touches toggles; a marquee always adds to what's selected
+            board.lattice.forEachTile(
+                touchingMinX: min(m.from.x, m.to.x), minY: min(m.from.y, m.to.y),
                 maxX: max(m.from.x, m.to.x), maxY: max(m.from.y, m.to.y)
             ) { tile in
                 if board.selected.remove(tile) == nil { board.selected.insert(tile) }
@@ -148,7 +195,7 @@ final class Editor {
             board.spawnTile(color: Palette.colors.randomElement()!, cameraCenter: camera.center)
         }
         board.settleEasing()
-        let radius = Shape.hexagon.neighborDist * Double(board.store.size).squareRoot() * 0.6
+        let radius = TileShape.hexagon.neighborDist * Double(board.store.size).squareRoot() * 0.6
         if camera.size.width > 0 {
             camera.zoom = min(max(min(camera.size.width, camera.size.height) / 2 / radius, 0.05), 1)
         }

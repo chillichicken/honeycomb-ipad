@@ -26,9 +26,9 @@ public struct Lattice {
     static let slotSearchNodeCap = 4096
 
     public let store: TileStore
-    public let shape: Shape
+    public let shape: TileShape
 
-    public init(store: TileStore, shape: Shape) {
+    public init(store: TileStore, shape: TileShape) {
         self.store = store
         self.shape = shape
     }
@@ -48,6 +48,23 @@ public struct Lattice {
             }
         }
         return top
+    }
+
+    /// Every tile whose outline touches the rectangle (not just those whose
+    /// center is inside it), at its settled position.
+    public func forEachTile(
+        touchingMinX minX: Double, minY: Double, maxX: Double, maxY: Double, _ visit: (Tile) -> Void
+    ) {
+        store.forEachTile(
+            inMinX: minX - tileSize, minY: minY - tileSize, maxX: maxX + tileSize, maxY: maxY + tileSize
+        ) { t in
+            if shape.intersects(
+                orientation: t.orientation, center: SIMD2(t.tx, t.ty), radius: tileSize,
+                minX: minX, minY: minY, maxX: maxX, maxY: maxY)
+            {
+                visit(t)
+            }
+        }
     }
 
     /// The tile occupying the slot at (sx, sy), other than those in `ignore`.

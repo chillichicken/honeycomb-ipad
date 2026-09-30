@@ -17,7 +17,7 @@ public struct NeighborSlot: Sendable {
 /// triangles alternate up/down, and every neighbor of one is the other.
 /// Everything derived from angles is computed once here, so hot paths (snap
 /// search, rendering) read constants instead of redoing trig.
-public struct Shape: Sendable {
+public struct TileShape: Sendable {
     public let id: ShapeID
     public let label: String
     public var orientations: Int { cornerUnitVectors.count }
@@ -55,14 +55,14 @@ public struct Shape: Sendable {
         return SIMD2(cos(r), sin(r))
     }
 
-    public static let hexagon = Shape(
+    public static let hexagon = TileShape(
         id: .hexagon, label: "Hexagon",
         corners: [[0, 60, 120, 180, 240, 300]],
         slots: [([30, 90, 150, 210, 270, 330], 0)],
         neighborDist: 3.0.squareRoot() * tileSize
     )
 
-    public static let triangle = Shape(
+    public static let triangle = TileShape(
         id: .triangle, label: "Triangle",
         corners: [
             [270, 30, 150],  // 0 = pointing up
@@ -72,14 +72,14 @@ public struct Shape: Sendable {
         neighborDist: tileSize
     )
 
-    public static let diamond = Shape(
+    public static let diamond = TileShape(
         id: .diamond, label: "Diamond",
         corners: [[0, 90, 180, 270]],
         slots: [([45, 135, 225, 315], 0)],
         neighborDist: tileSize * 2.0.squareRoot()
     )
 
-    public static func of(_ id: ShapeID) -> Shape {
+    public static func of(_ id: ShapeID) -> TileShape {
         switch id {
         case .hexagon: .hexagon
         case .triangle: .triangle
@@ -104,6 +104,28 @@ public struct Shape: Sendable {
                 if sign == 0 { sign = s } else if s != sign { return false }
             }
             start = end
+        }
+        return true
+    }
+
+    /// Does an axis-aligned rectangle touch the tile? Exact for these convex
+    /// shapes (separating-axis test): the rectangle's own axes plus each edge normal.
+    public func intersects(
+        orientation: Int, center: SIMD2<Double>, radius: Double,
+        minX: Double, minY: Double, maxX: Double, maxY: Double
+    ) -> Bool {
+        let corners = cornerUnitVectors[orientation].map { center + $0 * radius }
+        let polyMinX = corners.map(\.x).min()!, polyMaxX = corners.map(\.x).max()!
+        let polyMinY = corners.map(\.y).min()!, polyMaxY = corners.map(\.y).max()!
+        if polyMaxX < minX || polyMinX > maxX || polyMaxY < minY || polyMinY > maxY { return false }
+
+        let rect = [SIMD2(minX, minY), SIMD2(maxX, minY), SIMD2(maxX, maxY), SIMD2(minX, maxY)]
+        for i in 0..<corners.count {
+            let a = corners[i], b = corners[(i + 1) % corners.count]
+            let normal = SIMD2(a.y - b.y, b.x - a.x)  // perpendicular to the edge
+            let poly = corners.map { $0.x * normal.x + $0.y * normal.y }
+            let box = rect.map { $0.x * normal.x + $0.y * normal.y }
+            if poly.max()! < box.min()! || box.max()! < poly.min()! { return false }
         }
         return true
     }

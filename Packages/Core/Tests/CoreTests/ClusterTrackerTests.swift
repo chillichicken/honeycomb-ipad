@@ -3,9 +3,9 @@ import Testing
 @testable import Core
 
 private let chunk = chunkWorld
-private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
+private let allShapes: [TileShape] = ShapeID.allCases.map(TileShape.of)
 
-private func drain(_ tracker: ClusterTracker, _ shape: Shape) -> ClusterCounts {
+private func drain(_ tracker: ClusterTracker, _ shape: TileShape) -> ClusterCounts {
     tracker.step(shape: shape, budget: .seconds(3600))
     return tracker.counts
 }
@@ -18,7 +18,7 @@ private func drain(_ tracker: ClusterTracker, _ shape: Shape) -> ClusterCounts {
     }
 
     @Test func joinsAnIslandThatRunsAcrossSeveralChunks() {
-        let d = Shape.hexagon.neighborDist
+        let d = TileShape.hexagon.neighborDist
         let store = TileStore()
         var x = -chunk
         while x < chunk * 2 {  // a row over 3+ chunks
@@ -32,7 +32,7 @@ private func drain(_ tracker: ClusterTracker, _ shape: Shape) -> ClusterCounts {
     }
 
     @Test(arguments: allShapes)
-    func agreesWithTheFullFloodFillOnRandomBoards(shape: Shape) {
+    func agreesWithTheFullFloodFillOnRandomBoards(shape: TileShape) {
         for seed in 1...6 {
             let store = randomBoard(shape, seed: UInt64(seed), builds: 25, tilesPerBuild: 400, spread: chunk * 4)
             #expect(drain(ClusterTracker(store: store), shape) == computeClusters(store, shape: shape))
@@ -40,7 +40,7 @@ private func drain(_ tracker: ClusterTracker, _ shape: Shape) -> ClusterCounts {
     }
 
     @Test(arguments: allShapes)
-    func staysRightThroughRandomEdits(shape: Shape) {
+    func staysRightThroughRandomEdits(shape: TileShape) {
         let store = randomBoard(shape, seed: 99, builds: 15, tilesPerBuild: 500, spread: chunk * 3)
         let tracker = ClusterTracker(store: store)
         _ = drain(tracker, shape)

@@ -10,7 +10,7 @@ public final class Board {
     public static let defaultMaxTiles = 2_000_000
 
     public let store = TileStore()
-    public private(set) var shape: Shape
+    public private(set) var shape: TileShape
     public let maxTiles: Int
 
     public var selected: Set<Tile> = []
@@ -22,7 +22,7 @@ public final class Board {
     /// next "+" rotates onward from there and hugs the build's border.
     private(set) var spawnBackIndex: Int?
 
-    public init(shape: Shape = .hexagon, maxTiles: Int = Board.defaultMaxTiles) {
+    public init(shape: TileShape = .hexagon, maxTiles: Int = Board.defaultMaxTiles) {
         self.shape = shape
         self.maxTiles = maxTiles
     }
@@ -141,7 +141,7 @@ public final class Board {
     // MARK: Whole board
 
     /// Swaps the whole board for `tiles`, laid out in stacking order.
-    public func replace(shape: Shape, tiles: [Tile]) {
+    public func replace(shape: TileShape, tiles: [Tile]) {
         store.clear()
         self.shape = shape
         for t in tiles { store.add(t) }

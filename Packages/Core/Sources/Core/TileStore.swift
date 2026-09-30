@@ -105,6 +105,9 @@ public final class TileStore: Sequence {
     /// they were taken for fails, give them back with `restoreDirty`.
     public func takeDirty() -> Set<ChunkCoord> { saveWatch.take() }
 
+    /// Has anything changed since the last `takeDirty`?
+    public var hasUnsavedChanges: Bool { saveWatch.count > 0 }
+
     public func restoreDirty(_ chunks: some Sequence<ChunkCoord>) { saveWatch.restore(chunks) }
 
     // MARK: Chunks

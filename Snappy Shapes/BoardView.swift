@@ -66,8 +66,7 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
     /// Redraws only when something could look different.
     @objc private func tick() {
         MainActor.assumeIsolated {
-            editor.board.easeTowardTargets(skipping: editor.drag?.tiles ?? [])
-            if !editor.board.easing.isEmpty { editor.touch() }
+            editor.frameTick()
             if editor.version != renderedVersion {
                 renderedVersion = editor.version
                 setNeedsDisplay()

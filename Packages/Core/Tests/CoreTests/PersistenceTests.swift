@@ -282,7 +282,7 @@ struct Rig {
     @Test func aBigBoardSavesAndLoadsAndAOneTileEditStaysOneChunk() async throws {
         let rig = Rig()
         let board = makeBoard()
-        let d = Shape.hexagon.neighborDist
+        let d = TileShape.hexagon.neighborDist
         for i in 0..<100_000 {
             board.store.add(makeTile(Double(i % 400) * d, Double(i / 400) * d, color: UInt32(i % 7)))
         }

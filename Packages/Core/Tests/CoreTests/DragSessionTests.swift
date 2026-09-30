@@ -3,7 +3,7 @@ import Testing
 @testable import Core
 
 @Suite struct DragSessionTests {
-    let shape = Shape.hexagon
+    let shape = TileShape.hexagon
     var east: NeighborSlot { shape.neighborSlots[0][5] }
 
     @Test func grabbedTilesLeaveTheStoreAndComeBackOnDrop() {
