@@ -67,9 +67,10 @@ public final class ClusterTracker {
         let otherComponent: Int
     }
 
-    private static let neighborOffsets: [(Int, Int)] = (-1...1).flatMap { dx in
-        (-1...1).map { dy in (dx, dy) }
-    }.filter { $0 != 0 || $1 != 0 }
+    /// The chunks within `radius` of `chunk` (including itself).
+    private static func around(_ chunk: ChunkCoord, radius r: Int) -> [ChunkCoord] {
+        (-r...r).flatMap { dx in (-r...r).map { dy in ChunkCoord(x: chunk.x + dx, y: chunk.y + dy) } }
+    }
 
     public private(set) var counts = ClusterCounts(islands: 0, largest: 0)
     /// False until the first full pass has published.
@@ -101,11 +102,13 @@ public final class ClusterTracker {
             stale = true
         }
         for chunk in watch.take() {
+            // A change can add or remove a tile that touches a neighboring chunk, so the
+            // neighbors' border lists (and the numbering of their components) may be stale
+            // too: re-label the 3x3 around it, and redo the edges of the 5x5, since every
+            // chunk next to a re-labeled one holds edges that point at its old numbering.
             labelQueue.insert(chunk)
-            edgeQueue.insert(chunk)
-            for (dx, dy) in Self.neighborOffsets {
-                edgeQueue.insert(ChunkCoord(x: chunk.x + dx, y: chunk.y + dy))
-            }
+            for other in Self.around(chunk, radius: 1) where infos[other] != nil { labelQueue.insert(other) }
+            for other in Self.around(chunk, radius: 2) where infos[other] != nil || other == chunk { edgeQueue.insert(other) }
             stale = true
         }
         guard stale else { return }

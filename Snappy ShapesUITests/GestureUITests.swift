@@ -114,6 +114,18 @@ final class GestureUITests: XCTestCase {
         XCTAssertGreaterThan(value("tiles"), 12, "holding past the delay repeats quickly")
     }
 
+    func testGrowingABuildKeepsItOneIslandOnEveryShape() {
+        for shape in ["triangle", "diamond", "hexagon"] {
+            app = XCUIApplication()
+            launch(tiles: 30, shape: shape)
+            app.descendants(matching: .any)["Add tile"].firstMatch.press(forDuration: 2.5)
+            Thread.sleep(forTimeInterval: 2)  // let the island counter finish
+            XCTAssertGreaterThan(value("tiles"), 40, shape)
+            XCTAssertEqual(value("islands"), 1, "\(shape): every added tile must snap onto the build")
+            app.terminate()
+        }
+    }
+
     func testSoundToggleSwitchesBetweenOnAndOff() {
         launch()
         let on = app.buttons["Sound on"]

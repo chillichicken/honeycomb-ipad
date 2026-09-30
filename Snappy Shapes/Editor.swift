@@ -216,8 +216,8 @@ final class Editor {
     /// What UI tests read back to check what the fingers did.
     var stateSummary: String {
         String(
-            format: "zoom=%.3f;cx=%.1f;cy=%.1f;tiles=%d;selected=%d;mode=%@", camera.zoom, camera.center.x, camera.center.y,
-            board.store.size + (drag?.items.count ?? 0), board.selected.count, "\(mode)")
+            format: "zoom=%.3f;cx=%.1f;cy=%.1f;tiles=%d;selected=%d;islands=%d;mode=%@", camera.zoom, camera.center.x, camera.center.y,
+            board.store.size + (drag?.items.count ?? 0), board.selected.count, clusters.ready ? clusters.counts.islands : -1, "\(mode)")
     }
 
     // MARK: Debug

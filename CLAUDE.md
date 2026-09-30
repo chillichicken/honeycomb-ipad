@@ -49,7 +49,7 @@ Packages/Core/            local Swift package "Core": all game logic, unit-teste
     BoardPersistence      differential save / load of a Board (MainActor)
     Format                relativeTime / formatDuration
     SoundSynth            the two sounds synthesized to sample buffers (pure DSP, no audio hardware)
-  Tests/CoreTests/        Swift Testing (116 tests), mostly ported from the desktop vitest suite
+  Tests/CoreTests/        Swift Testing (118 tests), mostly ported from the desktop vitest suite
 Snappy Shapes/            the app target (SwiftUI + UIKit canvas)
   AppModel                screens, current puzzle, autosave loop, shape-switch confirmation
   Editor                  turns touches into board actions per mode; owns camera/drag/marquee
@@ -76,13 +76,14 @@ docs/interaction.md       the interaction spec (modes, gestures, recolor rules)
 - **Sound** is synthesized, not sampled: `SoundSynth` (Core) renders the desktop's two sounds (a band-passed-noise snap click and a softer low-passed "bloop" for a new tile) to buffers; `SoundPlayer` plays them through 4 round-robin player nodes so held-down "+" overlaps instead of cutting off. Sound is on by default, remembered in `UserDefaults`, and uses the `.ambient` audio session (respects the silent switch).
 - **Edits vs touches**: `Editor.edited()` stamps `lastEditAt` (drives autosave and "active time"); `touch()` only requests a redraw. A drag only counts as an edit if it moved.
 - **Persistence** is chunked and differential: `BoardPersistence.save` writes only the chunks `TileStore.takeDirty()` reports (full write for a new puzzle or after switching puzzle); on failure the dirty flags are restored so the retry still covers them. `FilePuzzleStore` writes each file atomically and `meta.json` last, but a many-file save is not one transaction (a crash midway can leave chunks of mixed age). Autosave is driven by `AppModel.tick()` (about 2 s after the last edit, 30 s safety, never mid-drag) plus a save when the scene leaves the foreground.
+- **Island counting** (`ClusterTracker`) is incremental per chunk, and a change in one chunk can alter its neighbors' cached borders (a tile added beside an unchanged chunk creates a new cross-chunk edge). So a changed chunk re-labels its 3x3 neighborhood and redoes edges for the 5x5; re-labeling only the changed chunk made the count report 2 islands for one connected build, most visibly at the origin where four chunks meet. The desktop TypeScript version has the same design and the same latent bug. `computeClusters` is the oracle, and `ClusterTrackerTests` compare against it after every kind of edit; keep doing that when touching it.
 - **Modes** are Grab / Select / Recolor; "+" is an action that returns to Grab. Details in `docs/interaction.md`.
 - **Dev-only UI** is behind `#if DEBUG` (tile-fill menu, zoom buttons, the `pinchpad` test element, the `SEED_*` launch environment).
 
 ## Testing and verifying changes
 
 - Logic changes: add or extend Swift Testing tests in `Packages/Core/Tests/CoreTests` and run `swift test`. Port the matching desktop test when there is one. Timing assertions run in debug builds in parallel, so keep thresholds generous (an O(n) regression takes minutes, not seconds).
-- Interaction changes: extend `GestureUITests`. The canvas exposes its state as an accessibility value (`zoom=..;cx=..;cy=..;tiles=..;selected=..;mode=..`, see `Editor.stateSummary`), which is how tests read back what the touches did.
+- Interaction changes: extend `GestureUITests`. The canvas exposes its state as an accessibility value (`zoom=..;cx=..;cy=..;tiles=..;selected=..;islands=..;mode=..`, see `Editor.stateSummary`), which is how tests read back what the touches did.
 - Visual changes: launch with seeded data and look at a screenshot.
   ```bash
   xcrun simctl install <device> <path to Snappy Shapes.app>

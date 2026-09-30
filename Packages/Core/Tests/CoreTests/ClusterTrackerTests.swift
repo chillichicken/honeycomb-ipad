@@ -95,4 +95,38 @@ private func drain(_ tracker: ClusterTracker, _ shape: TileShape) -> ClusterCoun
         _ = drain(tracker, .hexagon)
         #expect(tracker.version == v)
     }
+
+    @Test(arguments: allShapes)
+    func growingABuildAcrossChunkBordersStaysOneIsland(shape: TileShape) {
+        // "+" from the origin, where four chunks meet: a new tile lands next to a chunk
+        // that itself did not change, and the two halves must still join
+        let board = Board(shape: shape)
+        board.spawnTile(color: 1, cameraCenter: .zero)
+        let tracker = ClusterTracker(store: board.store)
+        for i in 0..<120 {
+            board.spawnTile(color: 2, cameraCenter: .zero)
+            board.easeTowardTargets(factor: 0.3)
+            if i % 3 == 0 { tracker.step(shape: shape, budget: .seconds(10)) }  // like a frame tick between presses
+            if i % 17 == 0 {
+                #expect(drain(tracker, shape) == computeClusters(board.store, shape: shape))
+            }
+        }
+        #expect(drain(tracker, shape) == ClusterCounts(islands: 1, largest: 121))
+    }
+
+    @Test func aTileAddedBesideAnUnchangedChunkJoinsItsIsland() {
+        let d = TileShape.hexagon.neighborDist
+        let store = TileStore()
+        // a row ending exactly at a chunk border, then one more tile across it
+        var x = -chunk + 10
+        while x < 0 {
+            store.add(makeTile(x, 10))
+            x += d
+        }
+        let tracker = ClusterTracker(store: store)
+        #expect(drain(tracker, .hexagon).islands == 1)
+        store.add(makeTile(x, 10))  // first tile of the next chunk over
+        #expect(drain(tracker, .hexagon) == computeClusters(store, shape: .hexagon))
+        #expect(tracker.counts.islands == 1)
+    }
 }
