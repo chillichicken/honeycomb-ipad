@@ -119,3 +119,23 @@ Chunk thumbnails or a persistent GPU instance buffer for boards well past 100k v
 ## Roadmap
 
 Ship to iPad (TestFlight, then App Store). Needs an Apple Developer Program membership (also needed for macOS notarization of the desktop app). Real-device testing of gestures, sound and large-board performance has not happened yet; everything so far was verified in the Simulator.
+
+## Status and open issues (handoff, 2026-10-01)
+
+**Where things are:** work is on branch `metal-sound-and-drag-fixes` (pushed; `main` is at the same commit, `a82e375`, nothing merged beyond that). 123 Core tests and 13 UI tests (`GestureUITests`) pass. Everything has only been verified in the iPad Pro 13" Simulator, never on a real iPad.
+
+**Open issue 1: "hexagons don't visually attach" (reported by the owner several times, NOT reproduced).** What was found and fixed along the way, each with regression tests:
+1. `ClusterTracker` reported 2 islands for one connected build (neighbor chunks' cached borders went stale).
+2. Dragged groups snapped by the nearest single-tile slot and stacked on existing tiles about half the time; now a group snaps only where every member fits.
+3. A drag hit-tested where the pan recognizer fired, not where the finger landed, so zoomed out the tile was missed and the canvas panned instead (`touchDown` in `BoardUIView`).
+What was verified NOT to be the problem: "+" (start screen -> Hexagon -> hold "+" 12 s -> 126 tiles, 1 island, all aligned), single-tile drag snap at 3 zoom levels, drawn vs logical positions (`drift=0`), a stale build (the owner's Xcode build post-dated the drag fix). The owner said that after reopening the saved puzzle "things were in place", which points at something live-only (input or rendering), not saved data.
+**To resolve it I need from the owner, at the moment it happens:** a screenshot with the bottom-right stats visible (the "N islands" line says whether the game thinks the tiles are connected; "built HH:MM:SS" says which build is running), which action they did ("+", dragging one tile, dragging a selection, Select or Recolor mode), the zoom shown in the stats, and what input they use (Simulator mouse/trackpad, or a real iPad with finger/Pencil). Ideas not yet checked: palm or second finger cancelling the one-finger drag (`maximumNumberOfTouches = 1`), trackpad "tap and drag" arriving as a scroll, drop behavior in Select/Recolor mode (one finger does not move tiles there, by design).
+
+**Open issue 2: "zooming shows only a partial rectangle with 200k tiles" (NOT reproduced).** Zoom in/out with the buttons, pinches, portrait and landscape, and the merged-to-tile hand-over all render fully. Need the same details (zoom method, screenshot, the cpu ms in the stats).
+
+**Other things to know:** debug zoom buttons exist because the Simulator doesn't forward trackpad pinches (Option-drag, Cmd+scroll also work). Sound is on by default with a toggle; the owner hasn't reported on how it sounds. The recolor icon is a water drop (no bucket symbol exists). The "Puzzles" folder button and the shape button are separate on purpose.
+
+**Next steps, in order:** (1) get the owner's screenshot/steps for issue 1 and reproduce it with a UI test before changing code; (2) same for issue 2; (3) test on a real iPad (gestures, sound, 100k+ tile performance, memory, and a per-platform tile cap); (4) the "Not ported yet" list above; (5) TestFlight/App Store needs an Apple Developer membership.
+
+**Desktop repo (`../honeycomb`):** has the same two logic bugs as the iPad version had (cross-chunk island counting in `clusters.ts`; group snapping in `input.ts` `findSnap`). Not fixed there; offer it to the owner. That repo also holds the owner's own uncommitted store-page work (`website/index.html`, images, large videos): do not touch or commit it without being asked.
+
