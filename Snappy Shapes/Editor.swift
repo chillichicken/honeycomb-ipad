@@ -10,6 +10,7 @@ enum Mode {
 @Observable @MainActor
 final class Editor {
     let board = Board()
+    let sound = SoundPlayer()
     var mode: Mode = .grab
     var paintColor: TileColor = Palette.classic
     private(set) var selectionCount = 0
@@ -97,6 +98,7 @@ final class Editor {
         }
         board.spawnTile(color: paintColor, cameraCenter: camera.center)
         mode = .grab
+        sound.playTileAdd()
         edited()
         return true
     }
@@ -190,9 +192,10 @@ final class Editor {
     func endDrag() {
         if let drag {
             let moved = drag.moved
-            drag.drop(snapDistance: snapDistance)
+            let landing = drag.drop(snapDistance: snapDistance)
             self.drag = nil
             if moved { lastEditAt = Date() }  // a plain tap isn't an edit
+            if landing != .free { sound.playSnap() }
         }
         if let m = marquee {
             // every shape the frame touches toggles; a marquee always adds to what's selected

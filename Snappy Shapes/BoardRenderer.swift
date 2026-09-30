@@ -28,6 +28,7 @@ final class BoardRenderer {
     private lazy var fabric = Self.makeFabric()
     private var lastFrameAt = CACurrentMediaTime()
     private var fps = 0.0
+    private var lastDrawMs = 0.0
 
     @MainActor
     func draw(_ editor: Editor, in ctx: CGContext, bounds: CGRect) {
@@ -83,6 +84,7 @@ final class BoardRenderer {
         drawSnapGhost(ctx, editor, shape, camera)
         drawMarquee(ctx, editor, camera)
         drawStats(editor, visible: visible.count, bounds: bounds)
+        lastDrawMs = (CACurrentMediaTime() - now) * 1000
     }
 
     // MARK: Background
@@ -247,7 +249,7 @@ final class BoardRenderer {
                 !c.ready ? "counting islands…" : c.counts.islands == 1 ? "1 island" : "\(c.counts.islands) islands · largest \(c.counts.largest)")
         }
         lines.append("zoom \(Int((editor.camera.zoom * 100).rounded()))%")
-        lines.append("\(Int(fps.rounded())) fps")
+        lines.append("\(Int(fps.rounded())) fps · draw \(String(format: "%.1f", lastDrawMs)) ms")
         var y = bounds.height - 150
         for line in lines.reversed().reversed() {
             right(line, font: .systemFont(ofSize: 15, weight: .medium), color: Theme.statsLines, baselineY: y + 15)

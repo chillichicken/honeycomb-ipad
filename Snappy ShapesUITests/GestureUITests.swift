@@ -114,6 +114,16 @@ final class GestureUITests: XCTestCase {
         XCTAssertGreaterThan(value("tiles"), 12, "holding past the delay repeats quickly")
     }
 
+    func testSoundToggleSwitchesBetweenOnAndOff() {
+        launch()
+        let on = app.buttons["Sound on"]
+        XCTAssertTrue(on.waitForExistence(timeout: 3), "sound starts on")
+        on.tap()
+        XCTAssertTrue(app.buttons["Sound off"].waitForExistence(timeout: 3))
+        app.buttons["Sound off"].tap()
+        XCTAssertTrue(app.buttons["Sound on"].waitForExistence(timeout: 3))
+    }
+
     func testSwitchingShapeAsksFirstAndCancelKeepsTheBoard() {
         launch(tiles: 20)
         settle()

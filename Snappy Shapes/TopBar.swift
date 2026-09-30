@@ -45,6 +45,14 @@ struct TopBar: View {
                     .panel(Capsule())
                 }
 
+                Button { editor.sound.enabled.toggle() } label: {
+                    Image(systemName: editor.sound.enabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                        .font(.title3).frame(width: 44, height: 44)
+                }
+                .foregroundStyle(Color(editor.sound.enabled ? Theme.text : Theme.muted))
+                .panel(Circle())
+                .accessibilityLabel(editor.sound.enabled ? "Sound on" : "Sound off")
+
                 #if DEBUG
                 Menu {
                     Button("Add 1,000 tiles") { editor.debugFill(1_000) }
