@@ -4,12 +4,22 @@ import Core
 /// Mode buttons on the left, actions ("+", delete) on the right. In recolor
 /// mode a color strip drops down underneath.
 struct TopBar: View {
-    @Bindable var editor: Editor
+    let model: AppModel
     let onHome: () -> Void
+    @State private var showingShapes = false
+
+    private var editor: Editor { model.editor }
 
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
+                Button { showingShapes = true } label: {
+                    ShapeIcon(id: editor.board.shape.id).frame(width: 30, height: 30).frame(width: 44, height: 44)
+                }
+                .panel(Circle())
+                .accessibilityLabel("Shape")
+                .popover(isPresented: $showingShapes, arrowEdge: .top) { shapePicker }
+
                 Button(action: onHome) {
                     Image(systemName: "folder").font(.title3).frame(width: 44, height: 44)
                 }
@@ -47,11 +57,11 @@ struct TopBar: View {
                 .panel(Circle())
                 #endif
 
-                Button { editor.addTile() } label: {
+                RepeatButton(accessibilityLabel: "Add tile", action: { editor.addTile() }) {
                     Image(systemName: "plus").font(.title2.weight(.semibold)).frame(width: 44, height: 44)
+                        .foregroundStyle(Color(Theme.text))
+                        .panel(Circle())
                 }
-                .foregroundStyle(Color(Theme.text))
-                .panel(Circle())
             }
 
             if editor.mode == .recolor {
@@ -72,6 +82,29 @@ struct TopBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
+    }
+
+    private var shapePicker: some View {
+        VStack(spacing: 4) {
+            ForEach([TileShape.triangle, .hexagon, .diamond], id: \.id) { shape in
+                Button {
+                    showingShapes = false
+                    model.requestShapeSwitch(to: shape.id)
+                } label: {
+                    HStack(spacing: 12) {
+                        ShapeIcon(id: shape.id).frame(width: 34, height: 34)
+                        Text(shape.label)
+                        Spacer(minLength: 12)
+                        if shape.id == editor.board.shape.id { Image(systemName: "checkmark") }
+                    }
+                    .foregroundStyle(Color(Theme.text))
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .frame(minWidth: 190)
+                }
+            }
+        }
+        .padding(8)
+        .presentationCompactAdaptation(.popover)
     }
 
     private func modeButton(_ mode: Mode, _ symbol: String, _ label: String, tint: Color? = nil) -> some View {

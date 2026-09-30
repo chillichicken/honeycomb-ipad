@@ -9,6 +9,8 @@ final class AppModel {
     private(set) var screen = Screen.start
     private(set) var puzzles: [PuzzleMeta] = []
     private(set) var errorMessage: String?
+    /// The shape the player asked for, waiting on their OK to clear the board.
+    private(set) var pendingShape: ShapeID?
     let editor = Editor()
 
     private let store: PuzzleStoring
@@ -43,6 +45,26 @@ final class AppModel {
         activeMs = 0
         screen = .playing
     }
+
+    /// Switching shape starts a new puzzle (the old one stays saved), so a board
+    /// with tiles on it asks first.
+    func requestShapeSwitch(to id: ShapeID) {
+        guard id != editor.board.shape.id else { return }
+        if editor.board.store.size == 0 {
+            newPuzzle(shape: id)  // nothing to lose
+        } else {
+            pendingShape = id
+        }
+    }
+
+    func confirmShapeSwitch() async {
+        guard let id = pendingShape else { return }
+        pendingShape = nil
+        await saveNow()
+        newPuzzle(shape: id)
+    }
+
+    func cancelShapeSwitch() { pendingShape = nil }
 
     func open(_ meta: PuzzleMeta) async {
         do {

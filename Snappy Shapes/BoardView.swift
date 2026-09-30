@@ -43,6 +43,15 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tap)))
     }
 
+    // UI tests find the canvas by this identifier and read the camera/selection from its value
+    override var isAccessibilityElement: Bool { get { true } set {} }
+    override var accessibilityIdentifier: String? { get { "board" } set {} }
+    override var accessibilityTraits: UIAccessibilityTraits { get { .allowsDirectInteraction } set {} }
+    override var accessibilityValue: String? {
+        get { MainActor.assumeIsolated { editor.stateSummary } }
+        set {}
+    }
+
     required init?(coder: NSCoder) { fatalError("not used") }
 
     // MARK: Render loop
@@ -100,7 +109,14 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
 
     @objc private func twoFingers(_ g: UIPanGestureRecognizer) {
         guard g.state == .changed else { return }
-        editor.pan(byScreen: g.translation(in: self))
+        let t = g.translation(in: self)
+        if g.modifierFlags.contains(.command) {
+            // ⌘ + scroll zooms: the way to zoom with a trackpad or wheel where the
+            // pinch never arrives (the Simulator only forwards two-finger scrolls)
+            editor.zoom(by: exp(-Double(t.y) / 200), around: g.location(in: self))
+        } else {
+            editor.pan(byScreen: t)
+        }
         g.setTranslation(.zero, in: self)
     }
 

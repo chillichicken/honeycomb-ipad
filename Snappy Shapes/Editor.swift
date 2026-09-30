@@ -13,6 +13,8 @@ final class Editor {
     var mode: Mode = .grab
     var paintColor: TileColor = Palette.colors[5]
     private(set) var selectionCount = 0
+    /// A short message shown over the canvas, then cleared.
+    private(set) var toast: String?
 
     // Read by the render loop every frame, so kept out of SwiftUI observation.
     @ObservationIgnored var camera = Camera()
@@ -48,9 +50,20 @@ final class Editor {
         }
     }
 
-    /// A fresh, empty board of `shape`.
+    func showToast(_ message: String) {
+        toast = message
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            if toast == message { toast = nil }
+        }
+    }
+
+    /// A new board of `shape` with one seed tile, so it isn't empty. The seed is
+    /// placement, not an edit: nothing is saved until the player does something.
     func reset(shape: TileShape) {
         board.replace(shape: shape, tiles: [])
+        board.spawnTile(color: paintColor, cameraCenter: .zero)
+        board.settleEasing()
         _ = board.store.takeDirty()
         camera.center = .zero
         camera.zoom = 1
@@ -75,11 +88,17 @@ final class Editor {
     // MARK: Buttons
 
     /// "+": grows the build from the last tile, then goes back to grabbing.
-    func addTile() {
-        guard board.canAdd(1) else { return }  // TODO: toast
+    /// Returns false when the board is full.
+    @discardableResult
+    func addTile() -> Bool {
+        guard board.canAdd(1) else {
+            showToast("Board is at its \(board.maxTiles.formatted())-tile limit")
+            return false
+        }
         board.spawnTile(color: paintColor, cameraCenter: camera.center)
         mode = .grab
         edited()
+        return true
     }
 
     func deleteSelection() {
@@ -183,6 +202,13 @@ final class Editor {
         panning = false
         syncSelection()
         touch()
+    }
+
+    /// What UI tests read back to check what the fingers did.
+    var stateSummary: String {
+        String(
+            format: "zoom=%.3f;cx=%.1f;cy=%.1f;tiles=%d;selected=%d;mode=%@", camera.zoom, camera.center.x, camera.center.y,
+            board.store.size + (drag?.items.count ?? 0), board.selected.count, "\(mode)")
     }
 
     // MARK: Debug

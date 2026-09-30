@@ -14,11 +14,46 @@ struct ContentView: View {
             case .playing:
                 ZStack(alignment: .top) {
                     BoardView(editor: model.editor).ignoresSafeArea()
-                    TopBar(editor: model.editor) { Task { await model.goHome() } }
+                    #if DEBUG
+                    // UI tests pinch inside this middle square: XCUITest starts an inward pinch
+                    // with the fingers at the element's edges, which on a full screen land on
+                    // the home-indicator and toolbar zones a real pinch never starts in
+                    Color.clear.frame(width: 500, height: 500)
+                        .allowsHitTesting(false)
+                        .accessibilityElement()
+                        .accessibilityIdentifier("pinchpad")
+                        .frame(maxHeight: .infinity)
+                    #endif
+                    TopBar(model: model) { Task { await model.goHome() } }
+                    if let toast = model.editor.toast {
+                        Text(toast)
+                            .font(.subheadline)
+                            .foregroundStyle(Color(red: 1, green: 0.7, blue: 0.7))
+                            .padding(.horizontal, 18).padding(.vertical, 10)
+                            .panel(Capsule())
+                            .padding(.top, 76)
+                            .transition(.opacity)
+                    }
                 }
                 .transition(.opacity)
             }
+            if let next = model.pendingShape {
+                ConfirmOverlay(
+                    message: "A puzzle can only use one shape — switching clears the current board. Continue?",
+                    confirmLabel: "Switch to \(TileShape.of(next).label)",
+                    onConfirm: { Task { await model.confirmShapeSwitch() } },
+                    onCancel: { model.cancelShapeSwitch() }
+                ) {
+                    HStack(spacing: 16) {
+                        ShapeIcon(id: model.editor.board.shape.id).frame(width: 56, height: 56)
+                        Text("→").font(.title).foregroundStyle(Color(Theme.muted))
+                        ShapeIcon(id: next).frame(width: 56, height: 56)
+                    }
+                }
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: model.pendingShape)
+        .animation(.easeInOut(duration: 0.2), value: model.editor.toast)
         .animation(.easeInOut(duration: 0.2), value: model.screen)
         .preferredColorScheme(.dark)
         .tint(Color(Theme.accent))
