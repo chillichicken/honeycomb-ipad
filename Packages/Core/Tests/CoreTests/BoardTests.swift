@@ -224,6 +224,20 @@ private let allShapes: [TileShape] = ShapeID.allCases.map(TileShape.of)
         #expect(board.easing.isEmpty)
     }
 
+    @Test func aBiggerFactorCoversMoreOfTheDistance() {
+        let board = makeBoard()
+        let slow = Tile(x: 0, y: 0, color: 0), fast = Tile(x: 0, y: 0, color: 0)
+        for t in [slow, fast] {
+            board.store.add(t)
+            board.store.setTarget(t, 100, 0)
+            board.startEasing(t)
+        }
+        board.easeTowardTargets(skipping: [fast], factor: 0.1)
+        board.easeTowardTargets(skipping: [slow], factor: 0.5)
+        #expect(abs(slow.x - 10) < 1e-9)
+        #expect(abs(fast.x - 50) < 1e-9)
+    }
+
     @Test func leavesHeldTilesAlone() {
         let board = makeBoard()
         let t = Tile(x: 0, y: 0, color: 0)

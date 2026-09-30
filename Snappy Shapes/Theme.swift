@@ -66,3 +66,12 @@ struct PanelBackground<S: Shape>: ViewModifier {
 extension View {
     func panel<S: Shape>(_ shape: S) -> some View { modifier(PanelBackground(shape: shape)) }
 }
+
+extension UIColor {
+    /// rgba as a GPU vector.
+    var simd: SIMD4<Float> {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        return SIMD4(Float(r), Float(g), Float(b), Float(a))
+    }
+}

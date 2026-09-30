@@ -164,10 +164,11 @@ public final class Board {
 
     /// Eases only the tiles actually mid-animation, not every tile on the board;
     /// a tile drops out once it visually converges. `skipping` are tiles held by a drag.
-    public func easeTowardTargets(skipping held: Set<Tile> = []) {
+    /// `factor` is the fraction of the remaining distance covered this step.
+    public func easeTowardTargets(skipping held: Set<Tile> = [], factor: Double = 0.25) {
         for t in easing where !held.contains(t) {
-            t.x += (t.tx - t.x) * 0.25
-            t.y += (t.ty - t.y) * 0.25
+            t.x += (t.tx - t.x) * factor
+            t.y += (t.ty - t.y) * factor
             if abs(t.tx - t.x) < 0.05 && abs(t.ty - t.y) < 0.05 {
                 t.x = t.tx
                 t.y = t.ty

@@ -1,4 +1,6 @@
 import SwiftUI
+import Core
+import MetalKit
 import UIKit
 
 /// The canvas: a UIView that draws the board and turns fingers into `Editor` calls.
@@ -11,15 +13,32 @@ struct BoardView: UIViewRepresentable {
 
 final class BoardUIView: UIView, UIGestureRecognizerDelegate {
     private let editor: Editor
-    private let renderer = BoardRenderer()
+    private let metalView = MTKView()
+    private var renderer: TileRenderer?
+    private let overlay = CanvasOverlay()
     private var link: CADisplayLink?
     private var renderedVersion = -1
+    private var lastFrameAt = CACurrentMediaTime()
+    private var lastTickAt = CACurrentMediaTime()
+    private var fps = 0.0
+    private var lastStats = FrameStats()
 
     init(editor: Editor) {
         self.editor = editor
         super.init(frame: .zero)
         isMultipleTouchEnabled = true
-        contentMode = .redraw
+
+        if let device = MTLCreateSystemDefaultDevice() {
+            metalView.device = device
+            metalView.colorPixelFormat = .bgra8Unorm
+            metalView.framebufferOnly = true
+            metalView.isPaused = true  // we draw when something changed, not on a timer
+            metalView.enableSetNeedsDisplay = false
+            metalView.isUserInteractionEnabled = false
+            addSubview(metalView)
+            renderer = TileRenderer(device: device, view: metalView)
+        }
+        overlay.attach(to: self)
 
         // one finger: the current mode's action (press and drag)
         let one = UIPanGestureRecognizer(target: self, action: #selector(oneFinger))
@@ -50,6 +69,8 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tap)))
     }
 
+    required init?(coder: NSCoder) { fatalError("not used") }
+
     // UI tests find the canvas by this identifier and read the camera/selection from its value
     override var isAccessibilityElement: Bool { get { true } set {} }
     override var accessibilityIdentifier: String? { get { "board" } set {} }
@@ -58,8 +79,6 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
         get { MainActor.assumeIsolated { editor.stateSummary } }
         set {}
     }
-
-    required init?(coder: NSCoder) { fatalError("not used") }
 
     // MARK: Render loop
 
@@ -75,6 +94,8 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        metalView.frame = bounds
+        overlay.layout(in: bounds)
         editor.camera.size = bounds.size
         editor.touch()
     }
@@ -82,17 +103,21 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
     /// Redraws only when something could look different.
     @objc private func tick() {
         MainActor.assumeIsolated {
-            editor.frameTick()
-            if editor.version != renderedVersion {
-                renderedVersion = editor.version
-                setNeedsDisplay()
-            }
+            let tickAt = CACurrentMediaTime()
+            editor.frameTick(dt: min(max(tickAt - lastTickAt, 0.001), 0.05))
+            lastTickAt = tickAt
+            guard editor.version != renderedVersion, let renderer,
+                let stats = renderer.draw(editor, in: metalView)
+            else { return }
+            renderedVersion = editor.version
+            // frames only draw when something changed, so a long gap is idleness, not a slow frame
+            let now = CACurrentMediaTime()
+            let dt = now - lastFrameAt
+            if dt < 0.25 { fps = fps * 0.9 + (1 / max(dt, 0.001)) * 0.1 }
+            lastFrameAt = now
+            lastStats = stats
+            overlay.update(editor, stats: stats, fps: fps, bounds: bounds)
         }
-    }
-
-    override func draw(_ rect: CGRect) {
-        guard let ctx = UIGraphicsGetCurrentContext() else { return }
-        MainActor.assumeIsolated { renderer.draw(editor, in: ctx, bounds: bounds) }
     }
 
     // MARK: Gestures

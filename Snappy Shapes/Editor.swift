@@ -41,8 +41,9 @@ final class Editor {
 
     /// Called every display frame: eases tiles, and works through island counting
     /// in small slices (held back while a finger is carrying tiles).
-    func frameTick() {
-        board.easeTowardTargets(skipping: drag?.tiles ?? [])
+    func frameTick(dt: Double) {
+        // the same glide at 60 Hz or 120 Hz: 25% of the remaining distance per 60th of a second
+        board.easeTowardTargets(skipping: drag?.tiles ?? [], factor: 1 - pow(0.75, dt * 60))
         if !board.easing.isEmpty { touch() }
         if drag == nil { clusters.step(shape: board.shape, budget: .milliseconds(3)) }
         if clusters.version != clusterVersion {

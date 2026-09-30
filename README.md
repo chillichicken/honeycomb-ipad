@@ -20,6 +20,6 @@ Cmd-U in Xcode runs the UI tests, which drive the app with real synthesized touc
 ## Layout
 
 - `Packages/Core`: the game logic (spatial tile store, snapping, islands, chunked persistence). No UIKit.
-- `Snappy Shapes`: the app (SwiftUI screens, Core Graphics board, gestures).
+- `Snappy Shapes`: the app (SwiftUI screens, Metal board renderer, gestures, sound).
 - `Snappy ShapesUITests`: gesture tests.
 - `docs/interaction.md`: how the modes and gestures work.
