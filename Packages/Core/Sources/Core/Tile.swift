@@ -27,3 +27,9 @@ public final class Tile {
         self.orientation = orientation
     }
 }
+
+/// Tiles are equal only to themselves.
+extension Tile: Hashable {
+    public static func == (a: Tile, b: Tile) -> Bool { a === b }
+    public func hash(into hasher: inout Hasher) { hasher.combine(ObjectIdentifier(self)) }
+}

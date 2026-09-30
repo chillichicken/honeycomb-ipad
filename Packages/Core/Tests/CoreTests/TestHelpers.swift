@@ -42,3 +42,51 @@ func ids(_ tiles: some Sequence<Tile>) -> Set<ObjectIdentifier> {
 func contains(_ tiles: [Tile], _ t: Tile) -> Bool {
     tiles.contains { $0 === t }
 }
+
+func makeBoard(_ shape: Shape = .hexagon, tiles: [Tile] = []) -> Board {
+    let board = Board(shape: shape)
+    for t in tiles { board.store.add(t) }
+    return board
+}
+
+/// Grows a disc of tiles by walking the shape's lattice from the origin.
+func lattice(block shape: Shape, radiusTiles: Double) -> Board {
+    let board = Board(shape: shape)
+    var seen: Set<[Int]> = [[0, 0]]
+    var queue: [(Double, Double, Int)] = [(0, 0, 0)]
+    while let (x, y, o) = queue.popLast() {
+        if hypot(x, y) > radiusTiles * shape.neighborDist { continue }
+        board.store.add(makeTile(x, y, orientation: o))
+        for s in shape.neighborSlots[o] {
+            let nx = x + s.dx, ny = y + s.dy
+            if seen.insert([Int(nx.rounded()), Int(ny.rounded())]).inserted {
+                queue.append((nx, ny, s.orientation))
+            }
+        }
+    }
+    return board
+}
+
+/// Grows random connected builds by walking the shape's lattice, so borders
+/// between chunks get crossed.
+func randomBoard(
+    _ shape: Shape, seed: UInt64, builds: Int, tilesPerBuild: Int, spread: Double
+) -> TileStore {
+    var rng = SeededRandom(seed: seed)
+    let store = TileStore()
+    var taken = Set<[Int]>()
+    for _ in 0..<builds {
+        let ox = (rng.next() - 0.5) * spread
+        let oy = (rng.next() - 0.5) * spread
+        var frontier: [(Double, Double, Int)] = [(ox, oy, 0)]
+        var n = 0
+        while n < tilesPerBuild && !frontier.isEmpty {
+            n += 1
+            let (x, y, o) = frontier.remove(at: Int(rng.next() * Double(frontier.count)))
+            guard taken.insert([Int(x.rounded()), Int(y.rounded())]).inserted else { continue }
+            store.add(makeTile(x, y, orientation: o))
+            for s in shape.neighborSlots[o] { frontier.append((x + s.dx, y + s.dy, s.orientation)) }
+        }
+    }
+    return store
+}
