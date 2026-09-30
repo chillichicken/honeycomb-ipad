@@ -267,7 +267,7 @@ private let allShapes: [Shape] = ShapeID.allCases.map(Shape.of)
                 board.remove(board.spawnTile(color: 0x123456, at: SIMD2(1e6, 1e6 + Double(i) * 50)))
             }
         }
-        #expect(elapsed < .seconds(3))
+        #expect(elapsed < .seconds(10))  // debug build, run in parallel; an O(n) regression takes minutes
     }
 }
 

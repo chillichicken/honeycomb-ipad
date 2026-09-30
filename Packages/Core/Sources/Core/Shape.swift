@@ -1,7 +1,7 @@
 import Foundation
 
 /// A puzzle uses exactly one shape for all its tiles.
-public enum ShapeID: String, CaseIterable, Sendable {
+public enum ShapeID: String, CaseIterable, Codable, Sendable {
     case hexagon, triangle, diamond
 }
 
