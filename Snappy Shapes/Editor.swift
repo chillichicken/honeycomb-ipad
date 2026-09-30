@@ -213,11 +213,20 @@ final class Editor {
         touch()
     }
 
+    /// Tiles drawn somewhere other than where they logically are, and not on their way there.
+    /// Always 0 when rendering and board state agree; a whole-board scan, so for tests only.
+    private var driftedTiles: Int {
+        board.store.filter { t in
+            !board.easing.contains(t) && hypot(t.x - t.tx, t.y - t.ty) > 0.5
+        }.count
+    }
+
     /// What UI tests read back to check what the fingers did.
     var stateSummary: String {
         String(
-            format: "zoom=%.3f;cx=%.1f;cy=%.1f;tiles=%d;selected=%d;islands=%d;mode=%@", camera.zoom, camera.center.x, camera.center.y,
-            board.store.size + (drag?.items.count ?? 0), board.selected.count, clusters.ready ? clusters.counts.islands : -1, "\(mode)")
+            format: "zoom=%.3f;cx=%.1f;cy=%.1f;tiles=%d;selected=%d;islands=%d;easing=%d;drift=%d;mode=%@", camera.zoom, camera.center.x, camera.center.y,
+            board.store.size + (drag?.items.count ?? 0), board.selected.count, clusters.ready ? clusters.counts.islands : -1,
+            board.easing.count, driftedTiles, "\(mode)")
     }
 
     // MARK: Debug

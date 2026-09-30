@@ -147,6 +147,66 @@ final class GestureUITests: XCTestCase {
         XCTAssertEqual(value("islands"), 1, "dropped next to its neighbor it must snap onto the lattice")
     }
 
+    /// What's drawn must match where tiles logically are, once the animations have finished.
+    private func assertNothingDrifted(_ what: String, file: StaticString = #filePath, line: UInt = #line) {
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertEqual(value("easing"), 0, "\(what): animations should have finished", file: file, line: line)
+        XCTAssertEqual(value("drift"), 0, "\(what): tiles are drawn away from where they are", file: file, line: line)
+    }
+
+    func testDrawnPositionsAlwaysMatchTheBoardAfterEveryKindOfEdit() {
+        launch(tiles: 30)
+        assertNothingDrifted("after seeding")
+
+        app.descendants(matching: .any)["Add tile"].firstMatch.press(forDuration: 2.0)
+        assertNothingDrifted("after holding +")
+
+        // drag single tiles around: away, then back next to the build
+        let mid = board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let away = board.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.25))
+        mid.press(forDuration: 0.2, thenDragTo: away)
+        assertNothingDrifted("after dragging a tile away")
+        away.press(forDuration: 0.2, thenDragTo: board.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.5)))
+        assertNothingDrifted("after dragging it back")
+
+        // a selected group
+        app.buttons["Select"].tap()
+        board.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.42))
+            .press(forDuration: 0.1, thenDragTo: board.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.58)))
+        settle()
+        XCTAssertGreaterThan(value("selected"), 0)
+        app.buttons["Grab"].tap()
+        let groupStart = board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        groupStart.press(forDuration: 0.2, thenDragTo: board.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.7)))
+        assertNothingDrifted("after dragging a group")
+        XCTAssertEqual(value("islands"), value("islands"))
+    }
+
+    func testDraggingSnapsAtEveryZoomLevel() {
+        for (name, zoomButton, taps) in [("zoomed out", "Zoom out", 2), ("zoomed way out", "Zoom out", 4), ("zoomed in", "Zoom in", 2)] {
+            app = XCUIApplication()
+            launch()
+            for _ in 0..<taps { app.buttons[zoomButton].tap() }
+            settle()
+            app.descendants(matching: .any)["Add tile"].firstMatch.press(forDuration: 0.2)
+            Thread.sleep(forTimeInterval: 1.5)
+            XCTAssertEqual(value("islands"), 1, name)
+
+            let z = value("zoom")
+            let seed = board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            let away = board.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+            seed.press(forDuration: 0.2, thenDragTo: away)
+            Thread.sleep(forTimeInterval: 2)
+            XCTAssertEqual(value("islands"), 2, "\(name): dropped in the open")
+            // back to within ~14 points of where it was: less than a snap radius at any zoom
+            away.press(forDuration: 0.2, thenDragTo: seed.withOffset(CGVector(dx: 14, dy: 9)))
+            Thread.sleep(forTimeInterval: 2)
+            XCTAssertEqual(value("islands"), 1, "\(name) (zoom \(z)): must snap next to its neighbor")
+            XCTAssertEqual(value("drift"), 0, "\(name): drawn where it is")
+            app.terminate()
+        }
+    }
+
     func testSoundToggleSwitchesBetweenOnAndOff() {
         launch()
         let on = app.buttons["Sound on"]

@@ -22,6 +22,10 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
     private var lastTickAt = CACurrentMediaTime()
     private var fps = 0.0
     private var lastStats = FrameStats()
+    /// Where the finger actually landed. A pan recognizer only fires after the finger has
+    /// already moved (a slop, or far more for a fast flick), so its own location is the wrong
+    /// place to look for the tile you meant to grab; zoomed out a tile is only a few points wide.
+    private var touchDown: CGPoint?
 
     init(editor: Editor) {
         self.editor = editor
@@ -80,6 +84,13 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
         set {}
     }
 
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        if event?.allTouches?.count == 1, let touch = touches.first {
+            touchDown = touch.location(in: self)
+        }
+    }
+
     // MARK: Render loop
 
     override func didMoveToWindow() {
@@ -126,9 +137,9 @@ final class BoardUIView: UIView, UIGestureRecognizerDelegate {
         let p = g.location(in: self)
         switch g.state {
         case .began:
-            // the recognizer fires after a little movement; start where the finger went down
-            let t = g.translation(in: self)
-            editor.beginDrag(at: CGPoint(x: p.x - t.x, y: p.y - t.y))
+            // the recognizer fires after the finger has moved; start where it went down
+            editor.beginDrag(at: touchDown ?? p)
+            touchDown = nil
             editor.continueDrag(to: p)
         case .changed:
             editor.continueDrag(to: p)
